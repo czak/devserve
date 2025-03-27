@@ -24,3 +24,16 @@ func (ps *pubsub) subscribe() <-chan string {
 	ps.subs = append(ps.subs, ch)
 	return ch
 }
+
+func (ps *pubsub) unsubscribe(ch <-chan string) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	subs := make([]chan string, 0, len(ps.subs)-1)
+	for _, sch := range ps.subs {
+		if sch != ch {
+			subs = append(subs, sch)
+		}
+	}
+	ps.subs = subs
+}

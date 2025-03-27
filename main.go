@@ -77,9 +77,19 @@ func handleEvents(ps *pubsub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 
-		for event := range ps.subscribe() {
-			fmt.Fprintf(w, "event: change\ndata: %s\n\n", event)
-			w.(http.Flusher).Flush()
+		done := r.Context().Done()
+		ch := ps.subscribe()
+		defer ps.unsubscribe(ch)
+
+		for {
+			select {
+			case <-done:
+				return
+
+			case event := <-ch:
+				fmt.Fprintf(w, "event: change\ndata: %s\n\n", event)
+				w.(http.Flusher).Flush()
+			}
 		}
 	}
 }
