@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 const eventScript = `<script>
@@ -20,10 +21,44 @@ func main() {
 		log.Fatal("Failed to get cwd")
 	}
 
+	ch := make(chan string)
+	go watchFiles(cwd, ch)
+
 	http.HandleFunc("/", serveFiles(cwd))
-	http.HandleFunc("/events", handleEvents)
+	http.HandleFunc("/events", handleEvents(ch))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func watchFiles(dir string, ch chan<- string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+
+	err = watcher.Add(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Has(fsnotify.Write) {
+				ch <- event.Name
+			}
+
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Println("error:", err)
+		}
+	}
 }
 
 func serveFiles(dir string) http.HandlerFunc {
@@ -38,14 +73,14 @@ func serveFiles(dir string) http.HandlerFunc {
 	}
 }
 
-func handleEvents(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
+func handleEvents(ch <-chan string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
 
-	for {
-		fmt.Fprintf(w, "event: change\ndata: test event\n\n")
-		w.(http.Flusher).Flush()
-
-		time.Sleep(time.Second)
+		for event := range ch {
+			fmt.Fprintf(w, "event: change\ndata: %s\n\n", event)
+			w.(http.Flusher).Flush()
+		}
 	}
 }
 
