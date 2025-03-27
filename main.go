@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 const eventScript = `<script>
@@ -28,37 +26,6 @@ func main() {
 	http.HandleFunc("/events", handleEvents(ps))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func watchFiles(dir string, ps *pubsub) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer watcher.Close()
-
-	err = watcher.Add(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			if event.Has(fsnotify.Write) {
-				ps.publish(event.Name)
-			}
-
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Println("error:", err)
-		}
-	}
 }
 
 func serveFiles(dir string) http.HandlerFunc {
