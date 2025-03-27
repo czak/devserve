@@ -1,15 +1,26 @@
 package main
 
-type pubsub []chan string
+import "sync"
 
-func (ps pubsub) publish(msg string) {
-	for _, ch := range ps {
+type pubsub struct {
+	mu   sync.RWMutex
+	subs []chan string
+}
+
+func (ps *pubsub) publish(msg string) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	for _, ch := range ps.subs {
 		ch <- msg
 	}
 }
 
 func (ps *pubsub) subscribe() <-chan string {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
 	ch := make(chan string)
-	*ps = append(*ps, ch)
+	ps.subs = append(ps.subs, ch)
 	return ch
 }
