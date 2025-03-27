@@ -12,7 +12,7 @@ import (
 )
 
 const eventScript = `<script>
-new EventSource('/events').addEventListener('change', (event) => console.log(event.data))
+new EventSource('/events').addEventListener('change', () => location.reload())
 </script>`
 
 func main() {
