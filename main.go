@@ -21,16 +21,16 @@ func main() {
 		log.Fatal("Failed to get cwd")
 	}
 
-	ch := make(chan string)
-	go watchFiles(cwd, ch)
+	ps := new(pubsub)
+	go watchFiles(cwd, ps)
 
 	http.HandleFunc("/", serveFiles(cwd))
-	http.HandleFunc("/events", handleEvents(ch))
+	http.HandleFunc("/events", handleEvents(ps))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func watchFiles(dir string, ch chan<- string) {
+func watchFiles(dir string, ps *pubsub) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -49,7 +49,7 @@ func watchFiles(dir string, ch chan<- string) {
 				return
 			}
 			if event.Has(fsnotify.Write) {
-				ch <- event.Name
+				ps.publish(event.Name)
 			}
 
 		case err, ok := <-watcher.Errors:
@@ -73,11 +73,11 @@ func serveFiles(dir string) http.HandlerFunc {
 	}
 }
 
-func handleEvents(ch <-chan string) http.HandlerFunc {
+func handleEvents(ps *pubsub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 
-		for event := range ch {
+		for event := range ps.subscribe() {
 			fmt.Fprintf(w, "event: change\ndata: %s\n\n", event)
 			w.(http.Flusher).Flush()
 		}
@@ -112,4 +112,18 @@ func serveHtml(w http.ResponseWriter, r *http.Request, fp string) {
 	html = bytes.Replace(html, []byte("</body>"), []byte(eventScript+"</body>"), 1)
 
 	w.Write(html)
+}
+
+type pubsub []chan string
+
+func (ps pubsub) publish(msg string) {
+	for _, ch := range ps {
+		ch <- msg
+	}
+}
+
+func (ps *pubsub) subscribe() <-chan string {
+	ch := make(chan string)
+	*ps = append(*ps, ch)
+	return ch
 }
