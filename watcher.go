@@ -2,37 +2,34 @@ package main
 
 import (
 	"log"
+	"time"
 
-	"github.com/fsnotify/fsnotify"
+	"github.com/radovskyb/watcher"
 )
 
 func watchFiles(dir string, ps *pubsub) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer watcher.Close()
+	w := watcher.New()
+	defer w.Close()
 
-	err = watcher.Add(dir)
-	if err != nil {
+	if err := w.AddRecursive(dir); err != nil {
 		log.Fatal(err)
 	}
 
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			if event.Has(fsnotify.Write) {
-				ps.publish(event.Name)
-			}
+	w.FilterOps(watcher.Write)
 
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
+	go func() {
+		for {
+			select {
+			case event := <-w.Event:
+				if !event.IsDir() {
+					ps.publish(event.Name())
+				}
+
+			case err := <-w.Error:
+				log.Fatal(err)
 			}
-			log.Println("error:", err)
 		}
-	}
+	}()
+
+	w.Start(100 * time.Millisecond)
 }
