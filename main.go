@@ -2,14 +2,16 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const eventScript = `<script>
-new EventSource('/events').addEventListener('change', () => location.reload())
+new EventSource('/events').addEventListener('change', (event) => console.log(event.data))
 </script>`
 
 func main() {
@@ -19,6 +21,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", serveFiles(cwd))
+	http.HandleFunc("/events", handleEvents)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -32,6 +35,17 @@ func serveFiles(dir string) http.HandlerFunc {
 		} else {
 			http.ServeFile(w, r, fp)
 		}
+	}
+}
+
+func handleEvents(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+
+	for {
+		fmt.Fprintf(w, "event: change\ndata: test event\n\n")
+		w.(http.Flusher).Flush()
+
+		time.Sleep(time.Second)
 	}
 }
 
