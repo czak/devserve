@@ -30,6 +30,8 @@ func main() {
 
 func serveFiles(dir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+
 		fp := resolveFilepath(dir, r.URL.Path)
 
 		if filepath.Ext(fp) == ".html" {
