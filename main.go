@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"flag"
 	"fmt"
 	"log"
@@ -10,9 +11,8 @@ import (
 	"path/filepath"
 )
 
-const eventScript = `<script>
-new EventSource('/events').addEventListener('change', () => location.reload())
-</script>`
+//go:embed event.js
+var eventScript string
 
 type config struct {
 	addr string
@@ -96,7 +96,7 @@ func serveHtml(w http.ResponseWriter, r *http.Request, fp string) {
 		return
 	}
 
-	html = bytes.Replace(html, []byte("</body>"), []byte(eventScript+"</body>"), 1)
+	html = bytes.Replace(html, []byte("</body>"), []byte("<script>"+eventScript+"</script></body>"), 1)
 
 	w.Write(html)
 }
