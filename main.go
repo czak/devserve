@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,19 +14,26 @@ const eventScript = `<script>
 new EventSource('/events').addEventListener('change', () => location.reload())
 </script>`
 
+type config struct {
+	addr string
+	dir  string
+}
+
 func main() {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Failed to get cwd")
-	}
+	cfg := config{}
+	flag.StringVar(&cfg.addr, "addr", ":8080", "network address")
+	flag.StringVar(&cfg.dir, "dir", ".", "directory to serve from")
+	flag.Parse()
 
 	ps := new(pubsub)
-	go watchFiles(cwd, ps)
+	go watchFiles(cfg.dir, ps)
 
-	http.HandleFunc("/", serveFiles(cwd))
+	http.HandleFunc("/", serveFiles(cfg.dir))
 	http.HandleFunc("/events", handleEvents(ps))
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("Serving files from %#v on %#v\n", cfg.dir, cfg.addr)
+
+	log.Fatal(http.ListenAndServe(cfg.addr, nil))
 }
 
 func serveFiles(dir string) http.HandlerFunc {
