@@ -53,6 +53,9 @@ func serveFiles(dir string) http.HandlerFunc {
 func handleEvents(ps *pubsub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.(http.Flusher).Flush()
 
 		done := r.Context().Done()
 		ch := ps.subscribe()
