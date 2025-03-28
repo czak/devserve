@@ -33,12 +33,13 @@ func main() {
 	ps := new(pubsub)
 	go watchFiles(cfg.dir, ps)
 
-	http.HandleFunc("/", serveFiles(cfg.dir))
-	http.HandleFunc("/events", handleEvents(ps))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", serveFiles(cfg.dir))
+	mux.HandleFunc("/events", handleEvents(ps))
 
 	slog.Info("Starting server", "dir", cfg.dir, "addr", cfg.addr)
 
-	log.Fatal(http.ListenAndServe(cfg.addr, nil))
+	log.Fatal(http.ListenAndServe(cfg.addr, logRequest(mux)))
 }
 
 func serveFiles(dir string) http.HandlerFunc {
