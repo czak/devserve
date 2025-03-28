@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/radovskyb/watcher"
@@ -11,7 +12,12 @@ func watchFiles(dir string, ps *pubsub) {
 	w := watcher.New()
 	defer w.Close()
 
-	if err := w.AddRecursive(dir); err != nil {
+	basepath, err := filepath.Abs(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := w.AddRecursive(basepath); err != nil {
 		log.Fatal(err)
 	}
 
@@ -21,9 +27,16 @@ func watchFiles(dir string, ps *pubsub) {
 		for {
 			select {
 			case event := <-w.Event:
-				if !event.IsDir() {
-					ps.publish(event.Name())
+				if event.IsDir() {
+					continue
 				}
+
+				relpath, err := filepath.Rel(basepath, event.Path)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				ps.publish(relpath)
 
 			case err := <-w.Error:
 				log.Fatal(err)
