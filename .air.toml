@@ -1,0 +1,3 @@
+[build]
+include_ext = ["go"]
+include_file = ["event.js"]
