@@ -1,4 +1,4 @@
-# devserve: A minimal webserver with livereload
+# devserve: A tiny webserver with live- and hot-reload
 
 `devserve` is a small development webserver with built-in live-reloading for HTML files.
 
@@ -7,20 +7,16 @@
 - Serve static files from specified directory (or CWD by default)
 - Watch files for changes
 - Automatically reload HTML files
+- Hot-reload CSS changes (no page reload)
 
 ## How does it work?
 
-HTML files are automatically injected with this snippet just before `</body>`:
+HTML files are served with [this script](https://github.com/czak/devserve/blob/main/event.js) injected just before `</body>`.
+It sets up the page to listen for [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) on `/events` 
 
-```js
-<script>
-new EventSource('/events').addEventListener('change', () => location.reload())
-</script>
-```
+The server watches files for any changes and notifies via `event: change` events on the `/events` endpoint.
 
-The server recursively watches files in specified directory and notifies of any writes via `text/event-stream` events on the `/events` endpoint.
-
-Any other files are served by `http.ServeFile` directly.
+Any other files and directories are served by `http.ServeFile` directly.
 
 ## Installation
 
@@ -58,3 +54,7 @@ Usage of devserve:
 ## Notes
 
 * Should work on all Go platforms, but only tested on Linux
+
+## References
+
+CSS hot reloading code was taken from https://esbuild.github.io/api/#hot-reloading-css
