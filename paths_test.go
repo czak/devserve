@@ -70,3 +70,43 @@ func TestResolveFilepathIndex(t *testing.T) {
 		t.Errorf("want %v, got %v", want, got)
 	}
 }
+
+func TestResolveFilepathPretty(t *testing.T) {
+	// dir
+	// ├── about.html
+	// ├── fileconflict
+	// ├── fileconflict.html
+	// ├── posts/
+	// │   └── ...
+	// └── posts.html
+	dir, _ := os.OpenRoot(t.TempDir())
+	dir.Create("about.html")
+	dir.Create("fileconflict")
+	dir.Create("fileconflict.html")
+	dir.Mkdir("posts", 0755)
+	dir.Create("posts.html")
+
+	got := resolveFilepath(dir.Name(), "/about")
+	want := dir.Name() + "/about.html"
+	if got != want {
+		t.Errorf("want %v, got %v", want, got)
+	}
+
+	got = resolveFilepath(dir.Name(), "/fileconflict")
+	want = dir.Name() + "/fileconflict"
+	if got != want {
+		t.Errorf("want %v, got %v", want, got)
+	}
+
+	got = resolveFilepath(dir.Name(), "/posts")
+	want = dir.Name() + "/posts.html"
+	if got != want {
+		t.Errorf("want %v, got %v", want, got)
+	}
+
+	got = resolveFilepath(dir.Name(), "/posts/")
+	want = dir.Name() + "/posts"
+	if got != want {
+		t.Errorf("want %v, got %v", want, got)
+	}
+}
