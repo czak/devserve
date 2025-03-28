@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,15 +16,19 @@ import (
 var eventScript string
 
 type config struct {
-	addr string
-	dir  string
+	addr  string
+	dir   string
+	debug bool
 }
 
 func main() {
 	cfg := config{}
 	flag.StringVar(&cfg.addr, "addr", ":8080", "network address")
 	flag.StringVar(&cfg.dir, "dir", ".", "directory to serve from")
+	flag.BoolVar(&cfg.debug, "debug", false, "verbose logging")
 	flag.Parse()
+
+	slog.SetDefault(newLogger(cfg.debug))
 
 	ps := new(pubsub)
 	go watchFiles(cfg.dir, ps)
@@ -90,4 +95,12 @@ func serveHtml(w http.ResponseWriter, r *http.Request, fp string) {
 	)
 
 	w.Write(html)
+}
+
+func newLogger(debug bool) *slog.Logger {
+	opts := slog.HandlerOptions{}
+	if debug {
+		opts.Level = slog.LevelDebug
+	}
+	return slog.New(slog.NewTextHandler(os.Stdout, &opts))
 }
