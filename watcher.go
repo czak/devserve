@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -35,6 +36,8 @@ func watchFiles(dir string, ps *pubsub) {
 				if err != nil {
 					log.Fatal(err)
 				}
+
+				slog.Debug("Change event", "path", relpath)
 
 				ps.publish(relpath)
 
