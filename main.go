@@ -36,7 +36,7 @@ func main() {
 	http.HandleFunc("/", serveFiles(cfg.dir))
 	http.HandleFunc("/events", handleEvents(ps))
 
-	log.Printf("Serving files from %#v on %#v\n", cfg.dir, cfg.addr)
+	slog.Info("Starting server", "dir", cfg.dir, "addr", cfg.addr)
 
 	log.Fatal(http.ListenAndServe(cfg.addr, nil))
 }
