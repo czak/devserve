@@ -96,7 +96,12 @@ func serveHtml(w http.ResponseWriter, r *http.Request, fp string) {
 		return
 	}
 
-	html = bytes.Replace(html, []byte("</body>"), []byte("<script>"+eventScript+"</script></body>"), 1)
+	html = bytes.Replace(
+		html,
+		[]byte("</body>"),
+		[]byte("<script>"+eventScript+"</script></body>"),
+		1,
+	)
 
 	w.Write(html)
 }
