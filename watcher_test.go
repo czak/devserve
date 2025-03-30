@@ -8,15 +8,20 @@ import (
 
 func TestWalkDirsRecursive(t *testing.T) {
 	// root
-	// ├── ext
-	// │   └── ext2
-	// └── start
-	//     ├── dir
-	//     │   └── dir2
+	// ├── ext/
+	// │   └── ext2/
+	// └── start/
+	//     ├── .git/
+	//     │   └── somedir/
+	//     ├── dir/
+	//     │   ├── .hiddenfile
+	//     │   └── dir2/
 	//     └── link -> ../ext
 	root := t.TempDir()
 	os.MkdirAll(root+"/ext/ext2", 0755)
+	os.MkdirAll(root+"/start/.git/somedir", 0755)
 	os.MkdirAll(root+"/start/dir/dir2", 0755)
+	os.Create(root + "/start/dir/.hiddenfile")
 	os.Symlink("../ext", root+"/start/link")
 
 	start := root + "/start"

@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"path/filepath"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -22,6 +23,7 @@ func watchFiles(root string, ps *pubsub) {
 	}
 
 	walkDirsRecursive(basepath, func(dir string) {
+		slog.Debug("Watching", "dir", dir)
 		watcher.Add(dir)
 	})
 
@@ -73,6 +75,10 @@ func walk(root string, sym string, dirfn func(string)) error {
 		path = filepath.Join(sym, rel)
 
 		if d.IsDir() {
+			if isHidden(path) {
+				return filepath.SkipDir
+			}
+
 			dirfn(path)
 		}
 
@@ -83,4 +89,8 @@ func walk(root string, sym string, dirfn func(string)) error {
 
 		return nil
 	})
+}
+
+func isHidden(path string) bool {
+	return strings.HasPrefix(filepath.Base(path), ".")
 }
