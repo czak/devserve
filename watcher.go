@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -27,13 +28,13 @@ func watchFiles(root string, ps *pubsub) {
 		watcher.Add(dir)
 	})
 
+	debounce := debouncer{
+		duration: 50 * time.Millisecond,
+	}
+
 	for {
 		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-
+		case event := <-watcher.Events:
 			if !event.Has(fsnotify.Write) {
 				continue
 			}
@@ -43,14 +44,12 @@ func watchFiles(root string, ps *pubsub) {
 				log.Fatal(err)
 			}
 
-			slog.Debug("Change event", "path", relpath)
+			debounce.then(func() {
+				slog.Debug("Change event", "path", relpath)
+				ps.publish(relpath)
+			})
 
-			ps.publish(relpath)
-
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
+		case err := <-watcher.Errors:
 			slog.Error("Watcher error", "error", err)
 		}
 	}
