@@ -1,51 +1,86 @@
 package main
 
 import (
+	"io/fs"
 	"log"
 	"log/slog"
 	"path/filepath"
-	"time"
 
-	"github.com/radovskyb/watcher"
+	"github.com/fsnotify/fsnotify"
 )
 
-func watchFiles(dir string, ps *pubsub) {
-	w := watcher.New()
-	defer w.Close()
+func watchFiles(root string, ps *pubsub) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
 
-	basepath, err := filepath.Abs(dir)
+	basepath, err := filepath.Abs(root)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := w.AddRecursive(basepath); err != nil {
-		log.Fatal(err)
-	}
+	walkDirsRecursive(basepath, func(dir string) {
+		watcher.Add(dir)
+	})
 
-	w.FilterOps(watcher.Write)
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
 
-	go func() {
-		for {
-			select {
-			case event := <-w.Event:
-				if event.IsDir() {
-					continue
-				}
+			if !event.Has(fsnotify.Write) {
+				continue
+			}
 
-				relpath, err := filepath.Rel(basepath, event.Path)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				slog.Debug("Change event", "path", relpath)
-
-				ps.publish(relpath)
-
-			case err := <-w.Error:
+			relpath, err := filepath.Rel(basepath, event.Name)
+			if err != nil {
 				log.Fatal(err)
 			}
-		}
-	}()
 
-	w.Start(100 * time.Millisecond)
+			slog.Debug("Change event", "path", relpath)
+
+			ps.publish(relpath)
+
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			slog.Error("Watcher error", "error", err)
+		}
+	}
+}
+
+func walkDirsRecursive(root string, dirfn func(string)) {
+	walk(root, root, dirfn)
+}
+
+func walk(root string, sym string, dirfn func(string)) error {
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			slog.Warn("Unable to enter", "path", path)
+			return filepath.SkipDir
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		path = filepath.Join(sym, rel)
+
+		if d.IsDir() {
+			dirfn(path)
+		}
+
+		if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
+			realpath, _ := filepath.EvalSymlinks(path)
+			return walk(realpath, path, dirfn)
+		}
+
+		return nil
+	})
 }
