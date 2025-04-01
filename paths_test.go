@@ -50,24 +50,55 @@ func TestResolveFilepathRegular(t *testing.T) {
 
 func TestResolveFilepathIndex(t *testing.T) {
 	// dir
+	// ├── index.html
 	// ├── missing
 	// └── present
 	//     └── index.html
 	dir, _ := os.OpenRoot(t.TempDir())
+	dir.Create("index.html")
 	dir.Mkdir("missing", 0755)
 	dir.Mkdir("present", 0755)
 	dir.Create("present/index.html")
 
-	want := dir.Name() + "/missing"
-	got := resolveFilepath(dir.Name(), "/missing/")
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
+	tests := []struct {
+		name string
+		dir  string
+		path string
+		want string
+	}{
+		{
+			name: "root with index.html",
+			dir:  dir.Name(),
+			path: "/",
+			want: dir.Name() + "/index.html",
+		},
+		{
+			name: "directory with no index",
+			dir:  dir.Name(),
+			path: "/missing/",
+			want: dir.Name() + "/missing",
+		},
+		{
+			name: "directory with index.html",
+			dir:  dir.Name(),
+			path: "/present/",
+			want: dir.Name() + "/present/index.html",
+		},
+		{
+			name: "directory with index.html, no trailing slash",
+			dir:  dir.Name(),
+			path: "/present",
+			want: dir.Name() + "/present",
+		},
 	}
 
-	want = dir.Name() + "/present/index.html"
-	got = resolveFilepath(dir.Name(), "/present/")
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveFilepath(tt.dir, tt.path)
+			if got != tt.want {
+				t.Errorf("want %v, got %v", tt.want, got)
+			}
+		})
 	}
 }
 
@@ -86,27 +117,44 @@ func TestResolveFilepathPretty(t *testing.T) {
 	dir.Mkdir("posts", 0755)
 	dir.Create("posts.html")
 
-	got := resolveFilepath(dir.Name(), "/about")
-	want := dir.Name() + "/about.html"
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
+	tests := []struct {
+		name string
+		dir  string
+		path string
+		want string
+	}{
+		{
+			name: "pretty url",
+			dir:  dir.Name(),
+			path: "/about",
+			want: dir.Name() + "/about.html",
+		},
+		{
+			name: "conflict with actual file",
+			dir:  dir.Name(),
+			path: "/fileconflict",
+			want: dir.Name() + "/fileconflict",
+		},
+		{
+			name: "same name as sibling directory",
+			dir:  dir.Name(),
+			path: "/posts",
+			want: dir.Name() + "/posts.html",
+		},
+		{
+			name: "directory with trailing slash",
+			dir:  dir.Name(),
+			path: "/posts/",
+			want: dir.Name() + "/posts",
+		},
 	}
 
-	got = resolveFilepath(dir.Name(), "/fileconflict")
-	want = dir.Name() + "/fileconflict"
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
-	}
-
-	got = resolveFilepath(dir.Name(), "/posts")
-	want = dir.Name() + "/posts.html"
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
-	}
-
-	got = resolveFilepath(dir.Name(), "/posts/")
-	want = dir.Name() + "/posts"
-	if got != want {
-		t.Errorf("want %v, got %v", want, got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveFilepath(tt.dir, tt.path)
+			if got != tt.want {
+				t.Errorf("want %v, got %v", tt.want, got)
+			}
+		})
 	}
 }
