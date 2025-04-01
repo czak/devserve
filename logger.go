@@ -19,24 +19,24 @@ type simpleLogger struct {
 
 func (l *simpleLogger) Debug(format string, v ...any) {
 	if l.level <= LevelDebug {
-		fmt.Println("[DEBUG] ", fmt.Sprintf(format, v...))
+		fmt.Println("\033[90m[DEBUG]\033[0m", fmt.Sprintf(format, v...))
 	}
 }
 
 func (l *simpleLogger) Info(format string, v ...any) {
 	if l.level <= LevelInfo {
-		fmt.Println("[INFO]  ", fmt.Sprintf(format, v...))
+		fmt.Println("\033[34m[INFO]\033[0m ", fmt.Sprintf(format, v...))
 	}
 }
 
 func (l *simpleLogger) Warn(format string, v ...any) {
 	if l.level <= LevelWarn {
-		fmt.Println("[WARN]  ", fmt.Sprintf(format, v...))
+		fmt.Println("\033[33m[WARN]\033[0m ", fmt.Sprintf(format, v...))
 	}
 }
 
 func (l *simpleLogger) Error(format string, v ...any) {
 	if l.level <= LevelError {
-		fmt.Println("[ERROR] ", fmt.Sprintf(format, v...))
+		fmt.Println("\033[91m[ERROR]\033[0m", fmt.Sprintf(format, v...))
 	}
 }
