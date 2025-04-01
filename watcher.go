@@ -3,7 +3,6 @@ package main
 import (
 	"io/fs"
 	"log"
-	"log/slog"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,7 +23,7 @@ func watchFiles(root string, ps *pubsub) {
 	}
 
 	walkDirsRecursive(basepath, func(dir string) {
-		slog.Debug("Watching", "dir", dir)
+		logger.Debug("Watching %s", dir)
 		watcher.Add(dir)
 	})
 
@@ -45,12 +44,12 @@ func watchFiles(root string, ps *pubsub) {
 			}
 
 			debounce.then(func() {
-				slog.Debug("Change event", "path", relpath)
+				logger.Debug("Change event: %s", relpath)
 				ps.publish(relpath)
 			})
 
 		case err := <-watcher.Errors:
-			slog.Error("Watcher error", "error", err)
+			logger.Error("Watcher error: %v", err)
 		}
 	}
 }
@@ -62,7 +61,7 @@ func walkDirsRecursive(root string, dirfn func(string)) {
 func walk(root string, sym string, dirfn func(string)) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			slog.Warn("Unable to enter", "path", path)
+			logger.Warn("Unable to enter %s: %v", path, err)
 			return filepath.SkipDir
 		}
 

@@ -5,8 +5,6 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
-	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,7 +26,9 @@ func main() {
 	flag.BoolVar(&cfg.debug, "debug", false, "verbose logging")
 	flag.Parse()
 
-	slog.SetDefault(newLogger(cfg.debug))
+	if cfg.debug {
+		logger.level = LevelDebug
+	}
 
 	ps := new(pubsub)
 	go watchFiles(cfg.dir, ps)
@@ -37,9 +37,11 @@ func main() {
 	mux.HandleFunc("/", serveFiles(cfg.dir))
 	mux.HandleFunc("/events", handleEvents(ps))
 
-	slog.Info("Starting server", "dir", cfg.dir, "addr", cfg.addr)
+	logger.Info("Starting server from %s at %s", cfg.dir, cfg.addr)
 
-	log.Fatal(http.ListenAndServe(cfg.addr, logRequest(mux)))
+	err := http.ListenAndServe(cfg.addr, logRequest(mux))
+	logger.Error("Failed to start: %s", err)
+	os.Exit(1)
 }
 
 func serveFiles(dir string) http.HandlerFunc {
@@ -96,12 +98,4 @@ func serveHtml(w http.ResponseWriter, r *http.Request, fp string) {
 	)
 
 	w.Write(html)
-}
-
-func newLogger(debug bool) *slog.Logger {
-	opts := slog.HandlerOptions{}
-	if debug {
-		opts.Level = slog.LevelDebug
-	}
-	return slog.New(slog.NewTextHandler(os.Stdout, &opts))
 }

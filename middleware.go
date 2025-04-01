@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 )
 
@@ -12,7 +11,7 @@ func logRequest(next http.Handler) http.Handler {
 			url    = r.URL.String()
 		)
 
-		slog.Debug("Request", "method", method, "url", url)
+		logger.Debug("Request %s %s", method, url)
 
 		next.ServeHTTP(w, r)
 	})
