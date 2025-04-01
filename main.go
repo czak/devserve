@@ -37,7 +37,7 @@ func main() {
 	mux.HandleFunc("/", serveFiles(cfg.dir))
 	mux.HandleFunc("/events", handleEvents(ps))
 
-	logger.Info("Starting server from %s at %s", cfg.dir, cfg.addr)
+	logger.Info("Starting server from %#v at %#v", cfg.dir, cfg.addr)
 
 	err := http.ListenAndServe(cfg.addr, logRequest(mux))
 	logger.Error("Failed to start: %s", err)
