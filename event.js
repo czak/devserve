@@ -1,4 +1,6 @@
-new EventSource('/events').addEventListener('change', e => {
+const source = new EventSource('/events')
+
+source.addEventListener('change', e => {
   const path = '/' + e.data
 
   for (const link of document.getElementsByTagName("link")) {
@@ -15,3 +17,7 @@ new EventSource('/events').addEventListener('change', e => {
 
   location.reload()
 })
+
+window.addEventListener("beforeunload", () => {
+  source.close();
+});
